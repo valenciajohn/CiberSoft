@@ -2,10 +2,14 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 require("dotenv").config(); // Cargar variables de entorno desde .env
 
 const app = express();
 const User = require("./User"); // Modelo del usuario
+const Log = require("./Log"); // Modelo de logs
+const verifyToken = require("./verifyToken"); // Middleware para verificar tokens
+const verifyRole = require("./verifyRole"); // Middleware para verificar roles
 
 app.use(express.json());
 app.use(cors());
@@ -31,33 +35,23 @@ mongoose.connect(mongoUri)
 app.post("/register", async (req, res) => {
     const { name, email, password, accountType } = req.body;
 
-    // Validar datos de entrada
     if (!name || !email || !password || !accountType) {
         return res.status(400).json({ message: "Todos los campos son obligatorios." });
     }
 
-    // Validar formato de correo electrónico
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-        return res.status(400).json({ message: "El formato del correo es inválido." });
-    }
-
-    // Validar valores aceptados para accountType
     const validAccountTypes = ["comprador", "vendedor"];
     if (!validAccountTypes.includes(accountType)) {
         return res.status(400).json({ message: `accountType debe ser uno de los siguientes: ${validAccountTypes.join(", ")}` });
     }
 
     try {
-        // Verificar si el usuario ya existe
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(409).json({ message: "El correo ya está registrado." });
         }
 
-        // Encriptar la contraseña
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Crear un nuevo usuario
         const newUser = new User({
             name,
             email,
@@ -78,38 +72,59 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
-    // Validar que se hayan enviado los campos requeridos
     if (!email || !password) {
         return res.status(400).json({ message: "Todos los campos son obligatorios." });
     }
 
     try {
-        // Verificar si el usuario existe
         const user = await User.findOne({ email });
         if (!user) {
+            await Log.create({ action: "LOGIN", email, status: "FAILED" });
             return res.status(404).json({ message: "Usuario no encontrado." });
         }
 
-        // Comparar la contraseña ingresada con la almacenada
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
+            await Log.create({ action: "LOGIN", email, status: "FAILED" });
             return res.status(401).json({ message: "Contraseña incorrecta." });
         }
 
-        // Login exitoso
+        const token = jwt.sign(
+            { id: user._id, email: user.email, accountType: user.accountType },
+            process.env.JWT_SECRET || "secretKey",
+            { expiresIn: "1h" }
+        );
+
+        await Log.create({ action: "LOGIN", email, status: "SUCCESS" });
+
         res.status(200).json({
             message: "Inicio de sesión exitoso.",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                accountType: user.accountType,
-            },
+            token,
         });
     } catch (error) {
         console.error("Error en el login:", error.message);
         res.status(500).json({ message: "Error interno del servidor." });
     }
+});
+
+// Ruta protegida para obtener perfil
+app.get("/profile", verifyToken, async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ message: "Usuario no encontrado." });
+    }
+
+    res.status(200).json({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        accountType: user.accountType,
+    });
+});
+
+// Ruta protegida para vendedores
+app.get("/vendedor/dashboard", verifyToken, verifyRole(["vendedor"]), (req, res) => {
+    res.status(200).json({ message: "Bienvenido al panel del vendedor." });
 });
 
 // Iniciar el servidor
@@ -119,9 +134,4 @@ app.listen(port, (err) => {
         process.exit(1);
     }
     console.log(`Servidor funcionando en el puerto ${port}`);
-}).on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(`El puerto ${port} ya está en uso.`);
-        process.exit(1);
-    }
 });
