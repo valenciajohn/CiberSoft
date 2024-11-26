@@ -1,15 +1,10 @@
 import React, { useState } from "react";
 import { IoMdSearch } from "react-icons/io";
-import { FaCaretDown, FaShoppingCart, FaCog, FaUser, FaGlobe, FaWallet } from "react-icons/fa"; // Importar el ícono de billetera
+import { FaCaretDown, FaShoppingCart, FaCog, FaUser } from "react-icons/fa"; // Removidos íconos innecesarios
 import DarkMode from "./DarkMode";
 
 const Navbar = () => {
-    const [language, setLanguage] = useState("ES"); // Estado para manejar el idioma
-
-    // Función para alternar entre español e inglés
-    const toggleLanguage = () => {
-        setLanguage((prevLanguage) => (prevLanguage === "ES" ? "EN" : "ES"));
-    };
+    const [username, setUsername] = useState("Juan Pérez"); // Nombre de usuario (puedes cambiarlo dinámicamente)
 
     return (
         <div className="bg-white dark:bg-gray-900 dark:text-white duration-200 relative z-40">
@@ -56,7 +51,7 @@ const Navbar = () => {
                             </button>
                         </div>
 
-                        {/* Configuración - Solo ícono de engranaje */}
+                        {/* Configuración - Nombre, Inventario y Cerrar Sesión */}
                         <div className="relative cursor-pointer group">
                             <button className="flex items-center gap-[8px] text-gray-500 hover:text-black dark:hover:text-white py-2 duration-200">
                                 <FaCog className="text-xl" />
@@ -65,24 +60,28 @@ const Navbar = () => {
                             {/* Menú desplegable */}
                             <div className="absolute top-full right-0 z-10 hidden group-hover:block w-[200px] rounded-md bg-white shadow-md dark:bg-gray-900 p-2 dark:text-white">
                                 <ul className="space-y-2">
+                                    {/* Nombre del usuario */}
+                                    <li className="text-center text-gray-700 dark:text-gray-300 font-semibold border-b pb-2">
+                                        {username}
+                                    </li>
                                     <li>
                                         <button
-                                            className="text-gray-500 dark:hover:text-white duration-200 inline-block w-full p-2 hover:bg-primary/20 rounded-md font-semibold flex items-center gap-2"
-                                            onClick={toggleLanguage}
+                                            className="text-gray-500 dark:hover:text-white duration-200 inline-block w-full p-2 hover:bg-primary/20 rounded-md font-semibold"
+                                            onClick={() =>
+                                                alert("Ir al inventario funcionalidad pendiente")
+                                            }
                                         >
-                                            <FaGlobe />
-                                            Cambiar idioma ({language})
+                                            Inventario
                                         </button>
                                     </li>
                                     <li>
                                         <button
-                                            className="text-gray-500 dark:hover:text-white duration-200 inline-block w-full p-2 hover:bg-primary/20 rounded-md font-semibold flex items-center gap-2"
+                                            className="text-white bg-[#f42c37] hover:bg-[#f42c37]/90 duration-200 inline-block w-full p-2 rounded-md font-semibold"
                                             onClick={() =>
-                                                alert("Cambiar moneda funcionalidad pendiente")
+                                                alert("Cerrar sesión funcionalidad pendiente")
                                             }
                                         >
-                                            <FaWallet />
-                                            Cambiar moneda
+                                            Cerrar Sesión
                                         </button>
                                     </li>
                                 </ul>
